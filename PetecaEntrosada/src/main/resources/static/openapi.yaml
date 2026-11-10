@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: PetecaEntrosada API (com SOLID)
+  version: 0.1.0
+  description: |
+    Placar de partida de peteca construído **com SOLID**, para estudo.
+
+    O contrato reflete o código:
+    - requests e responses são `record`s do Java 21, com campos explícitos;
+    - erros de jogo têm status próprios: **400** entrada inválida, **404** partida inexistente, **409** partida encerrada;
+    - o tapa é um texto aberto, não um enum fixo: tapas novos (princípio Aberto/Fechado) aparecem
+      em `GET /tapas` sem mudar este contrato.
+
+    Compare com a documentação do **PetecaFominha** (porta 8080).
+  contact:
+    name: Fernando Cangussu
+servers:
+  - url: http://localhost:8081
+    description: Execução local
+tags:
+  - name: Partidas
+    description: Criar partida, marcar ponto e consultar placar
+  - name: Tapas
+    description: Catálogo dos tapas disponíveis
+
+paths:
+  /partidas:
+    post:
+      tags: [Partidas]
+      summary: Criar partida
+      operationId: criarPartida
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaPartidaRequest'
+            example:
+              timeA: Fernando
+              timeB: Rival
+              regra: CURTA
+      responses:
+        '201':
+          description: Partida criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaResponse'
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+
+  /partidas/{id}/pontos:
+    post:
+      tags: [Partidas]
+      summary: Marcar ponto
+      description: Registra um ponto para o time A ou B, com o tapa usado. Quando a regra define um vencedor, a partida é encerrada e o resultado é avisado.
+      operationId: marcarPonto
+      parameters:
+        - $ref: '#/components/parameters/IdPartida'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PontoRequest'
+            example:
+              time: A
+              tapa: CHAPADO
+      responses:
+        '200':
+          description: Placar atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaResponse'
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '404':
+          $ref: '#/components/responses/PartidaNaoEncontrada'
+        '409':
+          $ref: '#/components/responses/PartidaEncerrada'
+
+  /partidas/{id}:
+    get:
+      tags: [Partidas]
+      summary: Consultar placar
+      operationId: buscarPartida
+      parameters:
+        - $ref: '#/components/parameters/IdPartida'
+      responses:
+        '200':
+          description: Partida encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaResponse'
+        '404':
+          $ref: '#/components/responses/PartidaNaoEncontrada'
+
+  /tapas:
+    get:
+      tags: [Tapas]
+      summary: Listar tapas disponíveis
+      description: Cada implementação de `Tapa` anotada com `@Component` aparece aqui automaticamente.
+      operationId: listarTapas
+      responses:
+        '200':
+          description: Catálogo de tapas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TapaResponse'
+              example:
+                - codigo: CHAPADO
+                  nome: Tapa direto (chapado)
+                  efeito: 'Mão aberta e plana, sem girar o pulso: a peteca viaja reta e veloz.'
+                - codigo: MUNHECA
+                  nome: Tapa com efeito (munheca)
+                  efeito: 'Torção rápida do pulso no impacto: a peteca faz uma parábola inesperada.'
+                - codigo: DEIXADINHA
+                  nome: Tapa amortecido (deixadinha)
+                  efeito: 'Mão e pulso relaxados: a peteca perde velocidade e cai junto à rede.'
+
+components:
+  parameters:
+    IdPartida:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      example: 1
+
+  schemas:
+    Time:
+      type: string
+      enum: [A, B]
+      description: Lado da rede
+
+    NovaPartidaRequest:
+      type: object
+      required: [timeA, timeB, regra]
+      properties:
+        timeA:
+          type: string
+          example: Fernando
+        timeB:
+          type: string
+          example: Rival
+        regra:
+          type: string
+          description: Código de uma RegraDePartida. Disponíveis hoje CURTA (12 pontos) e LONGA (21 com 2 de vantagem).
+          example: CURTA
+
+    PontoRequest:
+      type: object
+      required: [time, tapa]
+      properties:
+        time:
+          $ref: '#/components/schemas/Time'
+        tapa:
+          type: string
+          description: Código de um tapa do catálogo (veja GET /tapas).
+          example: CHAPADO
+
+    PartidaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        timeA:
+          type: string
+        timeB:
+          type: string
+        regra:
+          type: string
+          description: Descrição da regra da partida
+        pontosA:
+          type: integer
+        pontosB:
+          type: integer
+        vencedor:
+          type: string
+          nullable: true
+          description: Nome do time vencedor, ou null enquanto a partida continua
+        pontosPorTapa:
+          type: object
+          additionalProperties:
+            type: integer
+      example:
+        id: 1
+        timeA: Fernando
+        timeB: Rival
+        regra: Vence quem chegar primeiro a 12 pontos
+        pontosA: 3
+        pontosB: 1
+        vencedor: null
+        pontosPorTapa:
+          CHAPADO: 2
+          MUNHECA: 1
+          DEIXADINHA: 1
+
+    TapaResponse:
+      type: object
+      properties:
+        codigo:
+          type: string
+        nome:
+          type: string
+        efeito:
+          type: string
+
+    Erro:
+      type: object
+      properties:
+        erro:
+          type: string
+
+  responses:
+    EntradaInvalida:
+      description: Regra, tapa ou time inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: 'Tapa desconhecido: DE_COSTAS. Disponíveis: [CHAPADO, MUNHECA, DEIXADINHA]'
+    PartidaNaoEncontrada:
+      description: Não existe partida com esse id
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: 'Partida não encontrada: 99'
+    PartidaEncerrada:
+      description: A partida já tem vencedor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: A partida 1 já foi encerrada

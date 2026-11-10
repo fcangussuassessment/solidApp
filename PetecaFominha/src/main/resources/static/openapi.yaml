@@ -1,0 +1,196 @@
+openapi: 3.0.3
+info:
+  title: PetecaFominha API (sem SOLID)
+  version: 0.1.0
+  description: |
+    Placar de partida de peteca construído **sem SOLID**, para estudo.
+
+    Repare como o próprio contrato denuncia o código:
+    - os corpos são `Map<String, Object>`: os campos existem só por convenção;
+    - os tapas e as regras aceitos estão fixos num `if/else`;
+    - qualquer erro (regra inválida, tapa desconhecido, partida encerrada) vira **HTTP 500**.
+
+    Compare com a documentação do **PetecaEntrosada** (porta 8081).
+  contact:
+    name: Fernando Cangussu
+servers:
+  - url: http://localhost:8080
+    description: Execução local
+tags:
+  - name: Partidas
+    description: Criar partida, marcar ponto e consultar placar
+
+paths:
+  /partidas:
+    post:
+      tags: [Partidas]
+      summary: Criar partida
+      description: Regras aceitas (fixas no código) CURTA = 12 pontos, LONGA = 21 com 2 de vantagem.
+      operationId: criarPartida
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorpoNovaPartida'
+            example:
+              timeA: Fernando
+              timeB: Rival
+              regra: CURTA
+      responses:
+        '200':
+          description: Partida criada (devolve 200, não 201)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaMap'
+        '500':
+          $ref: '#/components/responses/ErroGenerico'
+
+  /partidas/{id}/pontos:
+    post:
+      tags: [Partidas]
+      summary: Marcar ponto
+      description: Tapas aceitos (fixos no if/else) CHAPADO, MUNHECA, DEIXADINHA.
+      operationId: marcarPonto
+      parameters:
+        - $ref: '#/components/parameters/IdPartida'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorpoPonto'
+            example:
+              time: A
+              tapa: CHAPADO
+      responses:
+        '200':
+          description: Placar atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaMap'
+        '500':
+          $ref: '#/components/responses/ErroGenerico'
+
+  /partidas/{id}:
+    get:
+      tags: [Partidas]
+      summary: Consultar placar
+      operationId: buscarPartida
+      parameters:
+        - $ref: '#/components/parameters/IdPartida'
+      responses:
+        '200':
+          description: Partida encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidaMap'
+        '500':
+          $ref: '#/components/responses/ErroGenerico'
+
+components:
+  parameters:
+    IdPartida:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      example: 1
+
+  schemas:
+    CorpoNovaPartida:
+      type: object
+      description: Map<String, String>. Nada impede campos faltando ou com nome errado.
+      additionalProperties:
+        type: string
+      properties:
+        timeA:
+          type: string
+        timeB:
+          type: string
+        regra:
+          type: string
+          description: CURTA ou LONGA. Outro valor gera HTTP 500.
+
+    CorpoPonto:
+      type: object
+      description: Map<String, String>.
+      additionalProperties:
+        type: string
+      properties:
+        time:
+          type: string
+          description: A ou B. Outro valor gera HTTP 500.
+        tapa:
+          type: string
+          description: CHAPADO, MUNHECA ou DEIXADINHA. Outro valor gera HTTP 500.
+
+    PartidaMap:
+      type: object
+      description: Map<String, Object> devolvido como está, sem contrato no código.
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+          format: int64
+        timeA:
+          type: string
+        timeB:
+          type: string
+        regra:
+          type: string
+        pontosA:
+          type: integer
+        pontosB:
+          type: integer
+        vencedor:
+          type: string
+          nullable: true
+        pontosPorTapa:
+          type: object
+          additionalProperties:
+            type: integer
+      example:
+        id: 1
+        timeA: Fernando
+        timeB: Rival
+        regra: CURTA
+        pontosA: 3
+        pontosB: 1
+        vencedor: null
+        pontosPorTapa:
+          CHAPADO: 2
+          MUNHECA: 1
+          DEIXADINHA: 1
+
+    ErroSpring:
+      type: object
+      description: Corpo de erro padrão do Spring Boot. Não diz o que deu errado.
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        path:
+          type: string
+      example:
+        timestamp: '2026-11-09T22:00:00.000+00:00'
+        status: 500
+        error: Internal Server Error
+        path: /partidas/1/pontos
+
+  responses:
+    ErroGenerico:
+      description: Qualquer erro de jogo ou de entrada vira 500
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErroSpring'
