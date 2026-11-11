@@ -1,0 +1,112 @@
+{
+  "info": {
+    "_postman_id": "75226183-cfc7-4d59-bc1a-cdaf2d6d7888",
+    "name": "01-PetecaFominha",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "60105865",
+    "_collection_link": "https://go.postman.co/collection/60105865-75226183-cfc7-4d59-bc1a-cdaf2d6d7888?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01-criarPartida",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timeA\": \"Fernando\",\n  \"timeB\": \"Rival\",\n  \"regra\": \"CURTA\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/partidas",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "partidas"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02-marcarPonto",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"time\": \"A\",\n  \"tapa\": \"CHAPADO\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/partidas/1/pontos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "partidas",
+            "1",
+            "pontos"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03-consultarPlacar",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/partidas/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "partidas",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
